@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏓 TTAT Championship Schedule Finder</title>
+    <meta name="description" content="ค้นหาตารางการแข่งขันเทเบิลเทนนิสชิงแชมป์ประเทศไทย ประเภทนีมสโมสร ประจำปี 2569">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- PDF.js for Client-side PDF Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+    <!-- Animated background particles -->
+    <div class="bg-particles" id="bgParticles"></div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Header -->
+    <header class="hero-header">
+        <div class="header-glow"></div>
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="logo.png" alt="Logo">
+                <div class="logo-text">
+                    <h1>Spinning Tools</h1>
+                    <p class="subtitle">ตารางการแข่งขันเทเบิลเทนนิสชิงแชมป์ประเทศไทย</p>
+                    <p class="subtitle-detail">ประเภทนีมสโมสร ประจำปี 2569 | SET Table Tennis Club Championships 2026
+                    </p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalMatches">0</span>
+                        <span class="stat-label">แมตช์ทั้งหมด</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="totalTeams">0</span>
+                        <span class="stat-label">ทีมทั้งหมด</span>
+                    </div>
+                    <div class="stat-divider"></div>
+                    <div class="stat-item">
+                        <span class="stat-number">9</span>
+                        <span class="stat-label">วันแข่งขัน</span>
+                    </div>
+                </div>
+                <div class="header-buttons">
+                    <button class="action-btn upload-btn" id="openUploadBtn" title="อัปโหลดข้อมูลใหม่">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                            height="18">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        อัปโหลด PDF / URL
+                    </button>
+                    <button class="action-btn export-all-btn" id="exportAllBtn" title="ส่งออกข้อมูลทั้งหมด">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                            height="18">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                        </svg>
+                        ส่งออกทั้งหมด (.xlsx)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay" id="uploadModal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📥 อัปโหลดข้อมูลตารางแข่งขันใหม่</h3>
+                <button class="modal-close" id="closeUploadModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Gemini API Settings -->
+                <div class="api-key-section" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="font-size: 0.9rem; font-weight: 600; color: var(--accent-secondary);">✨ Gemini API Key (เพื่อความแม่นยำสูงสุด)</label>
+                        <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size: 0.8rem; color: var(--info); text-decoration: none;">รับคีย์ฟรีที่นี่</a>
+                    </div>
+                    <input type="password" id="geminiApiKey" placeholder="วาง API Key ของคุณที่นี่ (ไม่บังคับ แต่แนะนำ)" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: white; font-family: monospace; font-size: 0.85rem;" autocomplete="off">
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;">หากใส่ Key ระบบจะใช้ AI วิเคราะห์ PDF ทำให้ได้ข้อมูลแม่นยำ 100% (ข้อมูลจะถูกเก็บไว้ในเครื่องของคุณเท่านั้น)</p>
+                </div>
+
+                <!-- Tab Switcher -->
+                <div class="upload-tabs">
+                    <button class="upload-tab active" data-tab="pdf">📄 อัปโหลด PDF</button>
+                    <button class="upload-tab" data-tab="url">🔗 ใส่ URL</button>
+                </div>
+
+                <!-- PDF Upload Tab -->
+                <div class="upload-tab-content active" id="tab-pdf">
+                    <div class="upload-dropzone" id="dropzone">
+                        <div class="dropzone-icon">📄</div>
+                        <h4>ลากไฟล์ PDF มาวางที่นี่</h4>
+                        <p>หรือคลิกเพื่อเลือกไฟล์</p>
+                        <input type="file" id="fileInput" accept=".pdf" style="display:none">
+                        <button class="browse-btn" id="browseBtn">เลือกไฟล์</button>
+                    </div>
+                    <div class="selected-file" id="selectedFile" style="display:none">
+                        <div class="file-info">
+                            <span class="file-icon">📄</span>
+                            <div class="file-details">
+                                <span class="file-name" id="fileName"></span>
+                                <span class="file-size" id="fileSize"></span>
+                            </div>
+                        </div>
+                        <button class="remove-file" id="removeFile">✕</button>
+                    </div>
+                </div>
+
+                <!-- URL Tab -->
+                <div class="upload-tab-content" id="tab-url">
+                    <div class="url-input-group">
+                        <label>ใส่ URL ของไฟล์ PDF ตารางแข่งขัน:</label>
+                        <input type="url" id="pdfUrlInput" placeholder="https://www.ttatthailand.com/..."
+                            class="url-input">
+                    </div>
+                    <div class="url-hint">
+                        <span>💡</span> ตัวอย่าง: https://www.ttatthailand.com/_files/ugd/xxx.pdf
+                    </div>
+                </div>
+
+                <!-- Process Button -->
+                <button class="process-btn" id="processBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                        <polyline points="16 16 12 12 8 16" />
+                        <line x1="12" y1="12" x2="12" y2="21" />
+                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+                    </svg>
+                    ประมวลผลข้อมูล
+                </button>
+
+                <!-- Progress -->
+                <div class="process-progress" id="processProgress" style="display:none">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">กำลังดึงข้อมูล...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Export Modal -->
+    <div class="modal-overlay" id="notifModal" style="display:none">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔔 ส่งออกแจ้งเตือนตารางแข่งขัน</h3>
+                <button class="modal-close" id="closeNotifModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="notif-preview" id="notifPreview">
+                    <!-- Preview will be populated by JS -->
+                </div>
+                <div class="notif-options">
+                    <h4>เลือกรูปแบบการส่งออก:</h4>
+                    <div class="notif-buttons">
+                        <button class="notif-export-btn excel" id="exportNotifExcel">
+                            <span class="btn-icon">📊</span>
+                            <span class="btn-text">
+                                <strong>ส่งออก Excel</strong>
+                                <small>ไฟล์ .xlsx พร้อมรายละเอียดครบ</small>
+                            </span>
+                        </button>
+                        <button class="notif-export-btn csv" id="exportNotifCSV">
+                            <span class="btn-icon">📋</span>
+                            <span class="btn-text">
+                                <strong>ส่งออก CSV</strong>
+                                <small>เปิดได้ทุกโปรแกรม</small>
+                            </span>
+                        </button>
+                        <button class="notif-export-btn alert" id="exportNotifAlert">
+                            <span class="btn-icon">🔔</span>
+                            <span class="btn-text">
+                                <strong>ส่งออกแจ้งเตือน</strong>
+                                <small>ไฟล์ .xlsx สรุปวัน-เวลาแจ้งเตือน</small>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Search Section -->
+        <section class="search-section" id="searchSection">
+            <div class="search-container">
+                <div class="search-title">
+                    <h2>🔍 ค้นหาตารางแข่งขันของทีม</h2>
+                    <p>พิมพ์ชื่อทีมหรือเลือกจากรายการ เพื่อดูตารางการแข่งขัน</p>
+                </div>
+                <div class="search-box">
+                    <div class="search-input-wrapper">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="M21 21l-4.35-4.35"></path>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="ค้นหาโปรแกรมการแข่งขัน พิมพ์ - ชื่อ/ทีม"
+                            autocomplete="off">
+                        <button class="clear-btn" id="clearBtn" style="display:none">✕</button>
+                    </div>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
+                </div>
+
+                <!-- Event Filter -->
+                <div class="filter-section">
+                    <div class="filter-label">กรองตามประเภท:</div>
+                    <div class="filter-chips" id="filterChips">
+                        <button class="chip active" data-filter="all">ทั้งหมด</button>
+                        <button class="chip" data-filter="BT">ชาย (B)</button>
+                        <button class="chip" data-filter="GT">หญิง (G)</button>
+                        <button class="chip" data-filter="MT">ชายทีม (MT)</button>
+                        <button class="chip" data-filter="WT">หญิงทีม (WT)</button>
+                    </div>
+                </div>
+
+                <!-- Source Filter -->
+                <div class="filter-section" style="margin-top: 10px;">
+                    <div class="filter-label">แหล่งข้อมูล:</div>
+                    <div class="filter-chips" id="sourceChips">
+                        <button class="chip active" data-source="all">รวมทั้งหมด</button>
+                        <button class="chip" data-source="original">ฐานข้อมูลหลัก</button>
+                        <button class="chip" data-source="uploaded" id="uploadedSourceChip"
+                            style="display:none">ไฟล์อัปโหลด</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display:none">
+            <div class="results-header">
+                <div class="results-info">
+                    <h3 id="resultsTitle">📋 ผลการค้นหา</h3>
+                    <p id="resultsSubtitle"></p>
+                </div>
+                <div class="results-actions">
+                    <button class="action-btn-sm notif-btn" id="notifBtn" title="ส่งออกแจ้งเตือน">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        แจ้งเตือน
+                    </button>
+                    <button class="action-btn-sm export-btn" id="exportBtn" title="ส่งออก Excel">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16"
+                            height="16">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        ส่งออก Excel
+                    </button>
+                    <button class="back-btn" id="backBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18"
+                            height="18">
+                            <path d="M19 12H5M12 19l-7-7 7-7" />
+                        </svg>
+                        กลับ
+                    </button>
+                </div>
+            </div>
+
+            <div class="results-grid" id="resultsGrid"></div>
+        </section>
+
+        <!-- Team List Section -->
+        <section class="team-list-section" id="teamListSection">
+            <h2 class="section-title">📋 รายชื่อทีมทั้งหมด</h2>
+            <p class="section-desc">คลิกที่ชื่อทีมเพื่อดูตารางการแข่งขัน</p>
+            <div class="team-grid" id="teamGrid"></div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p>🏓 ข้อมูลจากสมาคมเทเบิลเทนนิสแห่งประเทศไทย (TTAT)</p>
+            <p class="footer-note">ระบบค้นหาอัตโนมัติ - ข้อมูลตารางการแข่งขัน SET Table Tennis Club Championships 2026
+            </p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
